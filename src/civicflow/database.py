@@ -124,6 +124,86 @@ CREATE TABLE IF NOT EXISTS scheduled_jobs (
     last_error TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS jobs_due ON scheduled_jobs(status, run_at, lease_until);
+CREATE TABLE IF NOT EXISTS duty_plans (
+    plan_id TEXT PRIMARY KEY,
+    scenario TEXT NOT NULL,
+    port_id TEXT NOT NULL,
+    opening_start_at TEXT NOT NULL,
+    opening_end_at TEXT NOT NULL,
+    status TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    rest_rule_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    created_by TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS duty_plans_port ON duty_plans(port_id, opening_start_at);
+CREATE TABLE IF NOT EXISTS duty_requirements (
+    requirement_id TEXT PRIMARY KEY,
+    plan_id TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    shift_start_at TEXT NOT NULL,
+    shift_end_at TEXT NOT NULL,
+    qualification TEXT NOT NULL,
+    min_people INTEGER NOT NULL,
+    affected_count INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active',
+    version INTEGER NOT NULL,
+    FOREIGN KEY(plan_id) REFERENCES duty_plans(plan_id)
+);
+CREATE INDEX IF NOT EXISTS duty_requirements_plan ON duty_requirements(plan_id, shift_start_at);
+CREATE TABLE IF NOT EXISTS duty_assignments (
+    assignment_id TEXT PRIMARY KEY,
+    plan_id TEXT NOT NULL,
+    requirement_id TEXT NOT NULL,
+    person_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    start_at TEXT NOT NULL,
+    end_at TEXT NOT NULL,
+    qualification TEXT NOT NULL,
+    home_post_id TEXT,
+    status TEXT NOT NULL,
+    supersedes_assignment_id TEXT,
+    exempted_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    confirmed_home_at TEXT,
+    confirmed_home_by TEXT,
+    confirmed_receiving_at TEXT,
+    confirmed_receiving_by TEXT,
+    checked_in_at TEXT,
+    locked INTEGER NOT NULL DEFAULT 0,
+    detail_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS duty_assignments_person ON duty_assignments(person_id, start_at, end_at, status);
+CREATE INDEX IF NOT EXISTS duty_assignments_plan ON duty_assignments(plan_id, status);
+CREATE TABLE IF NOT EXISTS duty_events (
+    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    occurred_at TEXT NOT NULL,
+    actor_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    plan_id TEXT NOT NULL,
+    assignment_id TEXT NOT NULL DEFAULT '',
+    detail_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS duty_events_timeline ON duty_events(plan_id, occurred_at, event_id);
+CREATE INDEX IF NOT EXISTS duty_events_assignment ON duty_events(assignment_id, occurred_at);
+CREATE TABLE IF NOT EXISTS duty_gaps (
+    gap_id TEXT PRIMARY KEY,
+    plan_id TEXT NOT NULL,
+    requirement_id TEXT NOT NULL,
+    evaluated_at TEXT NOT NULL,
+    shift_start_at TEXT NOT NULL,
+    shift_end_at TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    qualification TEXT NOT NULL,
+    required INTEGER NOT NULL,
+    assigned INTEGER NOT NULL,
+    shortage INTEGER NOT NULL,
+    reasons_json TEXT NOT NULL,
+    status TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS duty_gaps_plan ON duty_gaps(plan_id, status, shift_start_at);
 """
 
 

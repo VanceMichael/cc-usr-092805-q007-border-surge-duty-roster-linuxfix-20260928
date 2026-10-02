@@ -37,3 +37,20 @@ PYTHONPATH=src python3 -m civicflow.cli --db /tmp/civicflow-demo.sqlite3 demo
 ```bash
 PYTHONPATH=src python3 -m civicflow.cli --db /tmp/civicflow-demo.sqlite3 list-cases
 ```
+
+## 高峰值守排班
+
+假期联合指挥演练等高峰场景由 `rosters` 承载：口岸按客流情景登记岗位、时段、资质与最低人数；
+正常班、待命、借调、休息、跨口岸移动与替班共用同一条人员时间轴，时间重叠直接拒绝。
+
+- 排班结果通过 `evaluate_gaps` 逐岗位暴露缺员及原因（时间轴冲突、休息不足且无豁免、无具备资质人员）。
+- 借调须经原部门与接收岗位双方（不同人）分别确认后才计入在岗；超时豁免由无利益关系主管在 `approvals` 中审批。
+- 签到回执走进件层：相同签到只记一次，业务标识相同而内容矛盾的回执进入 `inbox_conflicts` 核对队列；签到后在岗事实冻结，只能追加异常说明与交接记录。
+- 开放时间或客流情景调整时，已开始班次不重算，仅取消尚未开始且确实受影响的派班；班前一小时的缺员提醒落库为可恢复的持久任务。
+- `duty_events` 只追加，支持按任一历史时点回放实际在岗人员、调动过程与交接依据。
+
+```bash
+PYTHONPATH=src python3 -m civicflow.cli --db /tmp/civicflow-demo.sqlite3 roster-demo
+PYTHONPATH=src python3 -m civicflow.cli --db /tmp/civicflow-demo.sqlite3 roster-dashboard <plan_id>
+PYTHONPATH=src python3 -m civicflow.cli --db /tmp/civicflow-demo.sqlite3 roster-replay <plan_id> --as-of 2026-10-01T01:00:00+08:00
+```
